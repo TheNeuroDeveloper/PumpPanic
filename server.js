@@ -11,6 +11,7 @@ const MONGODB_URI = process.env.MONGO_PUBLIC_URL || process.env.MONGODB_URL || p
 // Define High Score Schema
 const highScoreSchema = new mongoose.Schema({
     score: Number,
+    wallet: String,
     date: { type: Date, default: Date.now }
 });
 
@@ -96,7 +97,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API Endpoints
 app.post('/api/highscores', async (req, res) => {
     try {
-        const { score } = req.body;
+        const { score, wallet } = req.body;
         if (!score || typeof score !== 'number') {
             return res.status(400).json({ success: false, error: 'Invalid score' });
         }
@@ -107,9 +108,12 @@ app.post('/api/highscores', async (req, res) => {
             await connectDB();
         }
         
-        const highScore = new HighScore({ score });
+        const highScore = new HighScore({ 
+            score,
+            wallet: wallet || 'Anonymous' // Use provided wallet or 'Anonymous' if none provided
+        });
         await highScore.save();
-        console.log('Saved high score:', score);
+        console.log('Saved high score:', { score, wallet: highScore.wallet });
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving high score:', error);
@@ -125,11 +129,22 @@ app.get('/api/highscores', async (req, res) => {
             await connectDB();
         }
         
+        console.log('Fetching high scores from database...');
         const highScores = await HighScore.find()
             .sort({ score: -1 })
             .limit(10);
-        console.log('Fetched high scores:', highScores);
-        res.json(highScores);
+        
+        console.log('Number of high scores found:', highScores.length);
+        console.log('High scores data:', JSON.stringify(highScores, null, 2));
+        
+        // Ensure we're sending the data in the correct format
+        const formattedScores = highScores.map(score => ({
+            score: score.score,
+            date: score.date
+        }));
+        
+        console.log('Formatted scores being sent:', JSON.stringify(formattedScores, null, 2));
+        res.json(formattedScores);
     } catch (error) {
         console.error('Error fetching high scores:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch high scores' });

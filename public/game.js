@@ -1003,39 +1003,37 @@ function handleGameOver() {
     }
     
     // Save high score to server with retry logic
-    function saveHighScore(retries = 3) {
-        fetch('/api/highscores', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ score: finalScore })
-        })
-        .then(response => {
+    async function saveHighScore(retries = 3) {
+        try {
+            const response = await fetch('/api/highscores', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    score: Math.floor(gameTime),
+                    wallet: userWallet || 'Anonymous'
+                })
+            });
+            
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            return response.json();
-        })
-        .then(data => {
+            
+            const data = await response.json();
             if (data.success) {
                 console.log('High score saved successfully');
-                updateHighScoresDisplay();
+                await fetchHighScores(); // Refresh the leaderboard
             } else {
-                console.error('Failed to save high score:', data.error);
-                if (retries > 0) {
-                    console.log(`Retrying... (${retries} attempts left)`);
-                    setTimeout(() => saveHighScore(retries - 1), 2000);
-                }
+                throw new Error('Failed to save high score');
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error saving high score:', error);
             if (retries > 0) {
                 console.log(`Retrying... (${retries} attempts left)`);
-                setTimeout(() => saveHighScore(retries - 1), 2000);
+                setTimeout(() => saveHighScore(retries - 1), 1000);
             }
-        });
+        }
     }
     
     // Start saving high score
