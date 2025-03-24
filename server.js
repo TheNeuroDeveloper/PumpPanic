@@ -20,16 +20,27 @@ const HighScore = mongoose.model('HighScore', highScoreSchema);
 const mongooseOptions = {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000, // Increased timeout
     socketTimeoutMS: 45000,
-    family: 4
+    family: 4,
+    retryWrites: true,
+    w: 'majority'
 };
 
 // Connect to MongoDB with retry logic
 async function connectDB() {
     try {
         console.log('Attempting to connect to MongoDB...');
-        console.log('Using MongoDB URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//****:****@')); // Log URI without credentials
+        // Log the URI without credentials for debugging
+        const sanitizedUri = MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//****:****@');
+        console.log('Using MongoDB URI:', sanitizedUri);
+        
+        // Parse the URI to check if it's valid
+        const uri = new URL(MONGODB_URI);
+        if (!uri.protocol || !uri.hostname) {
+            throw new Error('Invalid MongoDB URI format');
+        }
+
         await mongoose.connect(MONGODB_URI, mongooseOptions);
         console.log('Successfully connected to MongoDB');
         
@@ -37,16 +48,28 @@ async function connectDB() {
         await HighScore.findOne();
         console.log('Database connection test successful');
     } catch (error) {
-        console.error('MongoDB connection error:', error);
-        // Retry connection after 5 seconds
-        console.log('Retrying connection in 5 seconds...');
-        setTimeout(connectDB, 5000);
+        console.error('MongoDB connection error:', error.message);
+        console.error('Full error:', error);
+        
+        // Check if it's a connection error
+        if (error.name === 'MongooseServerSelectionError' || error.name === 'MongoNetworkError') {
+            console.log('Connection error detected. Retrying in 5 seconds...');
+            setTimeout(connectDB, 5000);
+        } else {
+            // For other errors, retry after a longer delay
+            console.log('Non-connection error detected. Retrying in 10 seconds...');
+            setTimeout(connectDB, 10000);
+        }
     }
 }
 
 // Handle MongoDB connection events
 mongoose.connection.on('error', err => {
-    console.error('MongoDB connection error:', err);
+    console.error('MongoDB connection error:', err.message);
+    if (err.name === 'MongooseServerSelectionError') {
+        console.log('Server selection error - attempting to reconnect...');
+        connectDB();
+    }
 });
 
 mongoose.connection.on('disconnected', () => {
