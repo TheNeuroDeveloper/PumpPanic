@@ -1002,23 +1002,44 @@ function handleGameOver() {
         localStorage.setItem('personalBest', finalScore);
     }
     
-    // Save high score to server
-    fetch('/api/highscores', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ score: finalScore })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            updateHighScoresDisplay();
-        } else {
-            console.error('Failed to save high score:', data.error);
-        }
-    })
-    .catch(error => console.error('Error saving high score:', error));
+    // Save high score to server with retry logic
+    function saveHighScore(retries = 3) {
+        fetch('/api/highscores', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ score: finalScore })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                console.log('High score saved successfully');
+                updateHighScoresDisplay();
+            } else {
+                console.error('Failed to save high score:', data.error);
+                if (retries > 0) {
+                    console.log(`Retrying... (${retries} attempts left)`);
+                    setTimeout(() => saveHighScore(retries - 1), 2000);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error saving high score:', error);
+            if (retries > 0) {
+                console.log(`Retrying... (${retries} attempts left)`);
+                setTimeout(() => saveHighScore(retries - 1), 2000);
+            }
+        });
+    }
+    
+    // Start saving high score
+    saveHighScore();
     
     // Show game over screen
     const gameOverScreen = document.getElementById('gameOver');
@@ -1030,10 +1051,15 @@ function handleGameOver() {
     playAgainButton.onclick = restartGame;
 }
 
-// Update high scores display
-function updateHighScoresDisplay() {
+// Update high scores display with retry logic
+function updateHighScoresDisplay(retries = 3) {
     fetch('/api/highscores')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(scores => {
             const highScoresList = document.getElementById('highScores');
             highScoresList.innerHTML = '';
@@ -1044,7 +1070,13 @@ function updateHighScoresDisplay() {
                 highScoresList.appendChild(li);
             });
         })
-        .catch(error => console.error('Error fetching high scores:', error));
+        .catch(error => {
+            console.error('Error fetching high scores:', error);
+            if (retries > 0) {
+                console.log(`Retrying... (${retries} attempts left)`);
+                setTimeout(() => updateHighScoresDisplay(retries - 1), 2000);
+            }
+        });
 }
 
 // Restart game

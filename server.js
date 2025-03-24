@@ -15,21 +15,44 @@ const highScoreSchema = new mongoose.Schema({
 
 const HighScore = mongoose.model('HighScore', highScoreSchema);
 
+// MongoDB connection options
+const mongooseOptions = {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+    socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+    family: 4 // Use IPv4, skip trying IPv6
+};
+
 // Connect to MongoDB with retry logic
 async function connectDB() {
     try {
-        await mongoose.connect(MONGODB_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
-        console.log('Connected to MongoDB');
+        console.log('Attempting to connect to MongoDB...');
+        await mongoose.connect(MONGODB_URI, mongooseOptions);
+        console.log('Successfully connected to MongoDB');
+        
+        // Test the connection
+        await HighScore.findOne();
+        console.log('Database connection test successful');
     } catch (error) {
         console.error('MongoDB connection error:', error);
         // Retry connection after 5 seconds
+        console.log('Retrying connection in 5 seconds...');
         setTimeout(connectDB, 5000);
     }
 }
 
+// Handle MongoDB connection events
+mongoose.connection.on('error', err => {
+    console.error('MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+    console.log('MongoDB disconnected. Attempting to reconnect...');
+    connectDB();
+});
+
+// Initial connection
 connectDB();
 
 // Middleware
@@ -43,6 +66,13 @@ app.post('/api/highscores', async (req, res) => {
         if (!score || typeof score !== 'number') {
             return res.status(400).json({ success: false, error: 'Invalid score' });
         }
+        
+        // Check if database is connected
+        if (mongoose.connection.readyState !== 1) {
+            console.log('Database not connected, attempting to reconnect...');
+            await connectDB();
+        }
+        
         const highScore = new HighScore({ score });
         await highScore.save();
         console.log('Saved high score:', score);
@@ -55,6 +85,12 @@ app.post('/api/highscores', async (req, res) => {
 
 app.get('/api/highscores', async (req, res) => {
     try {
+        // Check if database is connected
+        if (mongoose.connection.readyState !== 1) {
+            console.log('Database not connected, attempting to reconnect...');
+            await connectDB();
+        }
+        
         const highScores = await HighScore.find()
             .sort({ score: -1 })
             .limit(10);
