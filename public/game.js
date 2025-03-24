@@ -381,6 +381,19 @@ async function fetchHighScores() {
     }
 }
 
+// Helper function to shorten wallet address
+function shortenAddress(address) {
+    if (!address || address === 'Anonymous') {
+        return 'Anonymous';
+    }
+    try {
+        return `${address.slice(0, 6)}...${address.slice(-4)}`;
+    } catch (error) {
+        console.error('Error shortening address:', error);
+        return 'Anonymous';
+    }
+}
+
 // Update high scores display with retry logic
 function updateHighScoresDisplay(retries = 3) {
     const highScoresList = document.getElementById('highScoresList');
@@ -397,9 +410,14 @@ function updateHighScoresDisplay(retries = 3) {
             return response.json();
         })
         .then(scores => {
+            if (!Array.isArray(scores)) {
+                throw new Error('Invalid scores data received');
+            }
+            
             highScoresList.innerHTML = '';
             
             scores
+                .filter(score => score && typeof score.score === 'number')
                 .sort((a, b) => b.score - a.score)
                 .slice(0, 10)
                 .forEach((score, index) => {
@@ -415,11 +433,6 @@ function updateHighScoresDisplay(retries = 3) {
                 setTimeout(() => updateHighScoresDisplay(retries - 1), 2000);
             }
         });
-}
-
-// Helper function to shorten wallet address
-function shortenAddress(address) {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
 // Reset game state
