@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: burl-game
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: burl-game-db
+          property: connectionString
+    healthCheckPath: /
+    autoDeploy: true 

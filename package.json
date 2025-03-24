@@ -1,7 +1,7 @@
 {
-  "name": "pump-panic",
+  "name": "burl-game",
   "version": "1.0.0",
-  "description": "Web3-enabled mining game",
+  "description": "A retro-style mining game where you battle against rising water levels",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "mongoose": "^7.0.3"
+    "mongoose": "^7.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
