@@ -6,7 +6,7 @@ const app = express();
 // Use environment variables with fallbacks
 const PORT = process.env.PORT || 3000;
 // Use Railway's MongoDB URL if available, otherwise fallback to local
-const MONGODB_URI = process.env.MONGODB_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/burl-game';
+const MONGODB_URI = process.env.MONGO_PUBLIC_URL || process.env.MONGODB_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/burl-game';
 
 // Define High Score Schema
 const highScoreSchema = new mongoose.Schema({
