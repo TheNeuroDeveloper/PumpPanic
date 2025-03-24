@@ -7,70 +7,68 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/burl-game';
 
-const HighScore = require('./models/HighScore');
+// Define High Score Schema
+const highScoreSchema = new mongoose.Schema({
+    score: Number,
+    date: { type: Date, default: Date.now }
+});
 
-// Connect to MongoDB
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB'))
-    .catch(err => console.error('MongoDB connection error:', err));
+const HighScore = mongoose.model('HighScore', highScoreSchema);
+
+// Connect to MongoDB with retry logic
+async function connectDB() {
+    try {
+        await mongoose.connect(MONGODB_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        console.log('Connected to MongoDB');
+    } catch (error) {
+        console.error('MongoDB connection error:', error);
+        // Retry connection after 5 seconds
+        setTimeout(connectDB, 5000);
+    }
+}
+
+connectDB();
 
 // Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve index.html for all routes
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// API Endpoints
+app.post('/api/highscores', async (req, res) => {
+    try {
+        const { score } = req.body;
+        if (!score || typeof score !== 'number') {
+            return res.status(400).json({ success: false, error: 'Invalid score' });
+        }
+        const highScore = new HighScore({ score });
+        await highScore.save();
+        console.log('Saved high score:', score);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error saving high score:', error);
+        res.status(500).json({ success: false, error: 'Failed to save high score' });
+    }
 });
 
-// Get high scores
 app.get('/api/highscores', async (req, res) => {
     try {
         const highScores = await HighScore.find()
             .sort({ score: -1 })
-            .limit(100)
-            .select('wallet score timestamp');
+            .limit(10);
+        console.log('Fetched high scores:', highScores);
         res.json(highScores);
     } catch (error) {
         console.error('Error fetching high scores:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ success: false, error: 'Failed to fetch high scores' });
     }
 });
 
-// Update high scores
-app.post('/api/highscores', async (req, res) => {
-    try {
-        const { wallet, score } = req.body;
-        
-        if (!wallet || typeof score !== 'number') {
-            return res.status(400).json({ error: 'Invalid input' });
-        }
-        
-        // Find existing score for this wallet
-        const existingScore = await HighScore.findOne({ 
-            wallet: wallet.toLowerCase() 
-        });
-        
-        if (existingScore) {
-            // Update if new score is higher
-            if (score > existingScore.score) {
-                existingScore.score = score;
-                existingScore.timestamp = new Date();
-                await existingScore.save();
-            }
-        } else {
-            // Add new score
-            await HighScore.create({
-                wallet: wallet.toLowerCase(),
-                score
-            });
-        }
-        
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error updating high score:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
+// Serve index.html for all routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start server

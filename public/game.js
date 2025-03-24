@@ -991,43 +991,60 @@ function drawPump() {
     ctx.fillRect(PUMP_X - 8, handleY + 2, handleWidth - 4, 2);
 }
 
-// Handle game over with wallet integration
-async function handleGameOver() {
+// Handle game over
+function handleGameOver() {
     isGameOver = true;
     const finalScore = Math.floor(gameTime);
     
-    // Update local high score
-    if (finalScore > highScore) {
-        highScore = finalScore;
-        localStorage.setItem('highScore', highScore);
+    // Update personal best
+    const personalBest = localStorage.getItem('personalBest') || 0;
+    if (finalScore > personalBest) {
+        localStorage.setItem('personalBest', finalScore);
     }
     
-    // Update database high score
-    if (isWalletConnected) {
-        try {
-            const response = await fetch('/api/highscores', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    wallet: userWallet,
-                    score: finalScore
-                })
-            });
-            
-            if (response.ok) {
-                // Refresh high scores
-                await fetchHighScores();
-            }
-        } catch (error) {
-            console.error('Error updating high score:', error);
+    // Save high score to server
+    fetch('/api/highscores', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ score: finalScore })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateHighScoresDisplay();
+        } else {
+            console.error('Failed to save high score:', data.error);
         }
-    }
+    })
+    .catch(error => console.error('Error saving high score:', error));
+    
+    // Show game over screen
+    const gameOverScreen = document.getElementById('gameOver');
+    gameOverScreen.style.display = 'block';
+    document.getElementById('finalScore').textContent = `Final Score: ${finalScore}s`;
+    
+    // Add click handler to play again button
+    const playAgainButton = document.getElementById('playAgain');
+    playAgainButton.onclick = restartGame;
+}
 
-    document.getElementById('finalScore').textContent = finalScore;
-    document.getElementById('highScore').textContent = highScore;
-    document.getElementById('gameOver').style.display = 'block';
+// Update high scores display
+function updateHighScoresDisplay() {
+    fetch('/api/highscores')
+        .then(response => response.json())
+        .then(scores => {
+            const highScoresList = document.getElementById('highScores');
+            highScoresList.innerHTML = '';
+            
+            scores.forEach((score, index) => {
+                const li = document.createElement('li');
+                li.textContent = `${index + 1}. ${Math.floor(score.score)}s`;
+                highScoresList.appendChild(li);
+            });
+        })
+        .catch(error => console.error('Error fetching high scores:', error));
 }
 
 // Restart game
