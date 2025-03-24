@@ -5,7 +5,8 @@ const app = express();
 
 // Use environment variables with fallbacks
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/burl-game';
+// Use Railway's MongoDB URL if available, otherwise fallback to local
+const MONGODB_URI = process.env.MONGODB_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/burl-game';
 
 // Define High Score Schema
 const highScoreSchema = new mongoose.Schema({
@@ -19,15 +20,16 @@ const HighScore = mongoose.model('HighScore', highScoreSchema);
 const mongooseOptions = {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-    socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
-    family: 4 // Use IPv4, skip trying IPv6
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    family: 4
 };
 
 // Connect to MongoDB with retry logic
 async function connectDB() {
     try {
         console.log('Attempting to connect to MongoDB...');
+        console.log('Using MongoDB URI:', MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//****:****@')); // Log URI without credentials
         await mongoose.connect(MONGODB_URI, mongooseOptions);
         console.log('Successfully connected to MongoDB');
         
