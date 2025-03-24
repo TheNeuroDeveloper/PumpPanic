@@ -381,18 +381,39 @@ async function fetchHighScores() {
     }
 }
 
-// Update high scores display
-function updateHighScoresDisplay() {
+// Update high scores display with retry logic
+function updateHighScoresDisplay(retries = 3) {
     const highScoresList = document.getElementById('highScoresList');
-    highScoresList.innerHTML = '';
-    
-    globalHighScores
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 10)
-        .forEach((score, index) => {
-            const li = document.createElement('li');
-            li.textContent = `${index + 1}. ${shortenAddress(score.wallet)} - ${score.score}s`;
-            highScoresList.appendChild(li);
+    if (!highScoresList) {
+        console.error('High scores list element not found');
+        return;
+    }
+
+    fetch('/api/highscores')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(scores => {
+            highScoresList.innerHTML = '';
+            
+            scores
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10)
+                .forEach((score, index) => {
+                    const li = document.createElement('li');
+                    li.textContent = `${index + 1}. ${shortenAddress(score.wallet)} - ${Math.floor(score.score)}s`;
+                    highScoresList.appendChild(li);
+                });
+        })
+        .catch(error => {
+            console.error('Error fetching high scores:', error);
+            if (retries > 0) {
+                console.log(`Retrying... (${retries} attempts left)`);
+                setTimeout(() => updateHighScoresDisplay(retries - 1), 2000);
+            }
         });
 }
 
@@ -1047,34 +1068,6 @@ function handleGameOver() {
     // Add click handler to play again button
     const playAgainButton = document.getElementById('playAgain');
     playAgainButton.onclick = restartGame;
-}
-
-// Update high scores display with retry logic
-function updateHighScoresDisplay(retries = 3) {
-    fetch('/api/highscores')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(scores => {
-            const highScoresList = document.getElementById('highScores');
-            highScoresList.innerHTML = '';
-            
-            scores.forEach((score, index) => {
-                const li = document.createElement('li');
-                li.textContent = `${index + 1}. ${Math.floor(score.score)}s`;
-                highScoresList.appendChild(li);
-            });
-        })
-        .catch(error => {
-            console.error('Error fetching high scores:', error);
-            if (retries > 0) {
-                console.log(`Retrying... (${retries} attempts left)`);
-                setTimeout(() => updateHighScoresDisplay(retries - 1), 2000);
-            }
-        });
 }
 
 // Restart game
