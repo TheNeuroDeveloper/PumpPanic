@@ -40,6 +40,15 @@ async function connectDB() {
         if (!uri.protocol || !uri.hostname) {
             throw new Error('Invalid MongoDB URI format');
         }
+        
+        // Log connection details (without credentials)
+        console.log('Connection details:', {
+            protocol: uri.protocol,
+            hostname: uri.hostname,
+            port: uri.port,
+            pathname: uri.pathname,
+            hasCredentials: !!uri.username
+        });
 
         await mongoose.connect(MONGODB_URI, mongooseOptions);
         console.log('Successfully connected to MongoDB');
