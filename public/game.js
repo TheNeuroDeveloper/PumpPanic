@@ -402,36 +402,22 @@ function updateHighScoresDisplay(retries = 3) {
         return;
     }
 
-    fetch('/api/highscores')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(scores => {
-            if (!Array.isArray(scores)) {
-                throw new Error('Invalid scores data received');
-            }
-            
-            highScoresList.innerHTML = '';
-            
-            scores
-                .filter(score => score && typeof score.score === 'number')
-                .sort((a, b) => b.score - a.score)
-                .slice(0, 10)
-                .forEach((score, index) => {
-                    const li = document.createElement('li');
-                    li.textContent = `${index + 1}. ${shortenAddress(score.wallet)} - ${Math.floor(score.score)}s`;
-                    highScoresList.appendChild(li);
-                });
-        })
-        .catch(error => {
-            console.error('Error fetching high scores:', error);
-            if (retries > 0) {
-                console.log(`Retrying... (${retries} attempts left)`);
-                setTimeout(() => updateHighScoresDisplay(retries - 1), 2000);
-            }
+    // Use the globalHighScores array that was already fetched
+    if (!Array.isArray(globalHighScores)) {
+        console.error('Invalid high scores data');
+        return;
+    }
+    
+    highScoresList.innerHTML = '';
+    
+    globalHighScores
+        .filter(score => score && typeof score.score === 'number')
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10)
+        .forEach((score, index) => {
+            const li = document.createElement('li');
+            li.textContent = `${index + 1}. ${shortenAddress(score.wallet)} - ${Math.floor(score.score)}s`;
+            highScoresList.appendChild(li);
         });
 }
 
