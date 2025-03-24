@@ -137,16 +137,20 @@ app.get('/api/highscores', async (req, res) => {
             .limit(10);
         
         console.log('Number of high scores found:', highScores.length);
-        console.log('High scores data:', JSON.stringify(highScores, null, 2));
+        console.log('Raw high scores data:', JSON.stringify(highScores, null, 2));
         
         // Ensure we're sending the data in the correct format
-        const formattedScores = highScores.map(score => ({
-            score: score.score,
-            wallet: score.wallet,
-            date: score.date
-        }));
+        const formattedScores = highScores.map(score => {
+            const formatted = {
+                score: score.score,
+                wallet: score.wallet,
+                date: score.date
+            };
+            console.log('Formatted score:', formatted);
+            return formatted;
+        });
         
-        console.log('Formatted scores being sent:', JSON.stringify(formattedScores, null, 2));
+        console.log('All formatted scores being sent:', JSON.stringify(formattedScores, null, 2));
         res.json(formattedScores);
     } catch (error) {
         console.error('Error fetching high scores:', error);

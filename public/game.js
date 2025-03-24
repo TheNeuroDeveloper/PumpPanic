@@ -373,8 +373,10 @@ function updateWalletUI(connected) {
 // Fetch high scores from the database
 async function fetchHighScores() {
     try {
+        console.log('Fetching high scores...');
         const response = await fetch('/api/highscores');
         const scores = await response.json();
+        console.log('Received high scores:', scores);
         globalHighScores = scores;
         updateHighScoresDisplay();
     } catch (error) {
@@ -405,10 +407,11 @@ function updateHighScoresDisplay(retries = 3) {
 
     // Use the globalHighScores array that was already fetched
     if (!Array.isArray(globalHighScores)) {
-        console.error('Invalid high scores data');
+        console.error('Invalid high scores data:', globalHighScores);
         return;
     }
     
+    console.log('Updating high scores display with:', globalHighScores);
     highScoresList.innerHTML = '';
     
     globalHighScores
@@ -416,8 +419,10 @@ function updateHighScoresDisplay(retries = 3) {
         .sort((a, b) => b.score - a.score)
         .slice(0, 10)
         .forEach((score, index) => {
+            console.log('Processing score:', score);
             const li = document.createElement('li');
-            li.textContent = `${index + 1}. ${shortenAddress(score.wallet)} - ${Math.floor(score.score)}s`;
+            const walletDisplay = score.wallet ? shortenAddress(score.wallet) : 'Anonymous';
+            li.textContent = `${index + 1}. ${walletDisplay} - ${Math.floor(score.score)}s`;
             highScoresList.appendChild(li);
         });
 }
