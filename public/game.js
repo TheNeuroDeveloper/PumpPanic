@@ -306,6 +306,7 @@ async function disconnectWallet() {
 
 // Handle wallet connection
 async function handleWalletConnection(account) {
+    console.log('Connecting wallet:', account);
     userWallet = account;
     isWalletConnected = true;
     
@@ -1025,6 +1026,7 @@ function handleGameOver() {
     // Save high score to server with retry logic
     async function saveHighScore(retries = 3) {
         try {
+            console.log('Saving high score with wallet:', userWallet);
             const response = await fetch('/api/highscores', {
                 method: 'POST',
                 headers: {
@@ -1042,7 +1044,7 @@ function handleGameOver() {
             
             const data = await response.json();
             if (data.success) {
-                console.log('High score saved successfully');
+                console.log('High score saved successfully with wallet:', userWallet);
                 await fetchHighScores(); // Refresh the leaderboard
             } else {
                 throw new Error('Failed to save high score');

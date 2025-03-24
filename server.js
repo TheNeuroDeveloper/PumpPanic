@@ -98,6 +98,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.post('/api/highscores', async (req, res) => {
     try {
         const { score, wallet } = req.body;
+        console.log('Received high score submission:', { score, wallet });
+        
         if (!score || typeof score !== 'number') {
             return res.status(400).json({ success: false, error: 'Invalid score' });
         }
@@ -113,7 +115,7 @@ app.post('/api/highscores', async (req, res) => {
             wallet: wallet || 'Anonymous' // Use provided wallet or 'Anonymous' if none provided
         });
         await highScore.save();
-        console.log('Saved high score:', { score, wallet: highScore.wallet });
+        console.log('Saved high score to database:', highScore);
         res.json({ success: true });
     } catch (error) {
         console.error('Error saving high score:', error);
@@ -140,6 +142,7 @@ app.get('/api/highscores', async (req, res) => {
         // Ensure we're sending the data in the correct format
         const formattedScores = highScores.map(score => ({
             score: score.score,
+            wallet: score.wallet,
             date: score.date
         }));
         
