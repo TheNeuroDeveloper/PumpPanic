@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pump Panic! - Web3 Mining Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #2c3e50;
+            color: white;
+            font-family: 'Press Start 2P', monospace;
+        }
+        
+        #gameContainer {
+            display: none;
+            position: relative;
+        }
+        
+        #connectWallet {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 20px;
+            font-family: 'Press Start 2P', monospace;
+        }
+        
+        #connectWallet:hover {
+            background-color: #2980b9;
+        }
+        
+        #walletError {
+            display: none;
+            color: #e74c3c;
+            margin: 10px;
+            text-align: center;
+        }
+        
+        #walletAddress {
+            margin: 10px;
+            color: #2ecc71;
+        }
+        
+        #gameCanvas {
+            border: 4px solid #34495e;
+        }
+        
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+        }
+        
+        #gameOver {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        #highScoresContainer {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            min-width: 300px;
+        }
+        
+        #highScoresList {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        #highScoresList li {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .button {
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', monospace;
+        }
+        
+        .button:hover {
+            background-color: #c0392b;
+        }
+        
+        .wallet-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            min-width: 300px;
+        }
+        
+        .wallet-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #disconnectWallet {
+            padding: 10px 20px;
+            font-size: 14px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', monospace;
+            display: none;
+        }
+        
+        #disconnectWallet:hover {
+            background-color: #c0392b;
+        }
+        
+        #walletAddress {
+            margin: 10px;
+            color: #2ecc71;
+            font-size: 14px;
+            word-break: break-all;
+            text-align: center;
+        }
+        
+        .wallet-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #e74c3c;
+        }
+        
+        .status-dot.connected {
+            background-color: #2ecc71;
+        }
+        
+        #startScreen {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            border: 4px solid #3498db;
+            max-width: 600px;
+            z-index: 100;
+        }
+        
+        #startScreen h2 {
+            color: #3498db;
+            margin-bottom: 20px;
+        }
+        
+        .instructions {
+            text-align: left;
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .instructions ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        .instructions li {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .key {
+            background-color: #34495e;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-right: 10px;
+            color: #3498db;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .button.start {
+            background-color: #27ae60;
+            font-size: 16px;
+            padding: 15px 30px;
+            margin-top: 20px;
+        }
+        
+        .button.start:hover {
+            background-color: #219a52;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+    <h1>Pump Panic!</h1>
+    
+    <!-- Wallet Connection -->
+    <div class="wallet-container">
+        <div class="wallet-status">
+            <div id="statusDot" class="status-dot"></div>
+            <span id="walletStatus">Not Connected</span>
+        </div>
+        <div id="walletAddress"></div>
+        <div class="wallet-buttons">
+            <button id="connectWallet">Connect Wallet to Play</button>
+            <button id="disconnectWallet">Disconnect</button>
+        </div>
+        <div id="walletError"></div>
+    </div>
+    
+    <!-- Game Container -->
+    <div id="gameContainer">
+        <div id="score">Time: 0s</div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <!-- Start Screen -->
+        <div id="startScreen">
+            <h2>Welcome to Pump Panic!</h2>
+            <div class="instructions">
+                <p>You're helping Burlcore pump out their mining pit!</p>
+                <p>Your mission is to survive as long as possible by pumping out the rising water.</p>
+                <ul>
+                    <li><span class="key">SPACE</span> Pump water out</li>
+                    <li><span class="key">TIMING</span> Time your pumps carefully</li>
+                    <li><span class="key">WATCH</span> Water rises faster over time</li>
+                </ul>
+                <p>The longer you survive, the higher your score!</p>
+                <p>Your high score will be saved with your wallet address.</p>
+            </div>
+            <button class="button start" onclick="startGame()">Start Mining!</button>
+        </div>
+        
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p>Your Score: <span id="finalScore">0</span>s</p>
+            <p>High Score: <span id="highScore">0</span>s</p>
+            <button class="button" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+    
+    <!-- High Scores -->
+    <div id="highScoresContainer">
+        <h2>Top Miners</h2>
+        <ul id="highScoresList"></ul>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html> 
