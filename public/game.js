@@ -586,7 +586,7 @@ function update(deltaTime) {
 
         // Update score display
         const displayMultiplier = difficultyMultiplier * (isRaining ? RAIN_WATER_MULTIPLIER : 1) * (isHotDay ? HOT_DAY_WATER_MULTIPLIER : 1);
-        document.getElementById('score').textContent = `Time: ${Math.floor(gameTime)}s (${displayMultiplier.toFixed(1)}x)`;
+        document.getElementById('score').textContent = `Time: ${gameTime.toFixed(1)}s (${displayMultiplier.toFixed(1)}x)`;
         
         // Update weather state
         if (!isRaining && !isHotDay && Math.random() < RAIN_EVENT_CHANCE) {
@@ -1147,7 +1147,7 @@ function handleGameOver() {
     // Show game over screen
     const gameOverScreen = document.getElementById('gameOver');
     gameOverScreen.style.display = 'block';
-    document.getElementById('finalScore').textContent = `Final Score: ${finalScore}s`;
+    document.getElementById('finalScore').textContent = `Final Score: ${gameTime.toFixed(1)}s`;
     
     // Add click handler to play again button
     const playAgainButton = document.getElementById('playAgain');
