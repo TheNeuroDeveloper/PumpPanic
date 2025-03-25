@@ -460,7 +460,7 @@ function updateHighScoresDisplay(retries = 3) {
             console.log('Processing score:', score);
             const li = document.createElement('li');
             const walletDisplay = score.wallet ? shortenAddress(score.wallet) : 'Anonymous';
-            li.textContent = `${index + 1}. ${walletDisplay} - ${Math.floor(score.score)}s`;
+            li.textContent = `${index + 1}. ${walletDisplay} - ${score.score.toFixed(1)}s`;
             highScoresList.appendChild(li);
         });
 }
