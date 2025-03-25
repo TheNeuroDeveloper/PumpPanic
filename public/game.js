@@ -1116,7 +1116,7 @@ function handleGameOver() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    score: Math.floor(gameTime),
+                    score: gameTime,  // Send exact score with decimals
                     wallet: userWallet || 'Anonymous'
                 })
             });
