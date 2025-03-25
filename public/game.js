@@ -11,8 +11,11 @@ const PUMP_POWER = 80;
 const DIFFICULTY_INCREASE_RATE = 0.08;
 const PUMP_COOLDOWN = 0.05;
 const RAIN_EVENT_CHANCE = 0.002; // 0.2% chance per frame to start rain
+const HOT_DAY_EVENT_CHANCE = 0.001; // 0.1% chance per frame to start hot day
 const RAIN_DURATION = 2000; // 2 seconds
+const HOT_DAY_DURATION = 3000; // 3 seconds
 const RAIN_WATER_MULTIPLIER = 2; // Water rises twice as fast during rain
+const HOT_DAY_WATER_MULTIPLIER = 0.5; // Water rises half as fast during hot day
 const MAX_RAINDROPS = 100;
 
 // Colors
@@ -21,6 +24,9 @@ const COLORS = {
     skyDark: '#5499C7',
     skyCloud: '#FFFFFF',
     skyCloudDark: '#E8E8E8',
+    skyHot: '#4A90E2', // Brighter blue for hot day
+    skyHotCloud: '#FFFFFF',
+    skyHotCloudDark: '#F5F5F5',
     ground: '#8B4513',
     groundDark: '#6E3C1E',
     groundLight: '#A0522D',
@@ -66,11 +72,14 @@ let isPumping = false;  // For animation
 let spaceWasPressed = false;  // Track if space is being held
 let isGameStarted = false;
 
-// Rain state
+// Weather state
 let isRaining = false;
+let isHotDay = false;
 let rainTimer = 0;
+let hotDayTimer = 0;
 let raindrops = [];
 let skyDarkness = 0; // 0 to 1 for rain effect
+let skyBrightness = 0; // 0 to 1 for hot day effect
 let clouds = [];
 
 // Character properties
@@ -214,6 +223,35 @@ class Cloud {
             // Draw shadow/depth
             ctx.beginPath();
             ctx.fillStyle = shadowColor;
+            ctx.arc(
+                this.x + segment.xOffset,
+                this.y + segment.yOffset + 5,
+                segment.radius * 0.9,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+        });
+    }
+
+    drawHotDay(ctx) {
+        // Draw each cloud segment with bright, sunny colors
+        this.segments.forEach(segment => {
+            // Draw main segment with bright white
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+            ctx.arc(
+                this.x + segment.xOffset,
+                this.y + segment.yOffset,
+                segment.radius,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+            
+            // Draw shadow/depth with slight blue tint
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(245, 245, 255, 0.9)';
             ctx.arc(
                 this.x + segment.xOffset,
                 this.y + segment.yOffset + 5,
@@ -534,7 +572,8 @@ function update(deltaTime) {
         // Always increase water level
         const baseRise = WATER_RISE_SPEED * difficultyMultiplier * deltaTime;
         const rainMultiplier = isRaining ? RAIN_WATER_MULTIPLIER : 1;
-        waterLevel += baseRise * rainMultiplier;
+        const hotDayMultiplier = isHotDay ? HOT_DAY_WATER_MULTIPLIER : 1;
+        waterLevel += baseRise * rainMultiplier * hotDayMultiplier;
         
         // Clamp water level
         waterLevel = Math.min(PIT_HEIGHT, Math.max(0, waterLevel));
@@ -546,12 +585,16 @@ function update(deltaTime) {
         }
 
         // Update score display
-        const displayMultiplier = difficultyMultiplier * (isRaining ? RAIN_WATER_MULTIPLIER : 1);
+        const displayMultiplier = difficultyMultiplier * (isRaining ? RAIN_WATER_MULTIPLIER : 1) * (isHotDay ? HOT_DAY_WATER_MULTIPLIER : 1);
         document.getElementById('score').textContent = `Time: ${Math.floor(gameTime)}s (${displayMultiplier.toFixed(1)}x)`;
         
-        // Update rain state
-        if (!isRaining && Math.random() < RAIN_EVENT_CHANCE) {
+        // Update weather state
+        if (!isRaining && !isHotDay && Math.random() < RAIN_EVENT_CHANCE) {
             startRain();
+        }
+        
+        if (!isRaining && !isHotDay && Math.random() < HOT_DAY_EVENT_CHANCE) {
+            startHotDay();
         }
         
         if (isRaining) {
@@ -562,6 +605,13 @@ function update(deltaTime) {
             raindrops.forEach(drop => drop.update(deltaTime));
         }
         
+        if (isHotDay) {
+            hotDayTimer -= deltaTime * 1000;
+            if (hotDayTimer <= 0) {
+                stopHotDay();
+            }
+        }
+        
         // Update clouds and effects
         clouds.forEach(cloud => cloud.update(deltaTime));
         
@@ -569,6 +619,12 @@ function update(deltaTime) {
             skyDarkness = Math.min(skyDarkness + deltaTime * 2, 0.5);
         } else {
             skyDarkness = Math.max(skyDarkness - deltaTime * 2, 0);
+        }
+
+        if (isHotDay) {
+            skyBrightness = Math.min(skyBrightness + deltaTime * 2, 1);
+        } else {
+            skyBrightness = Math.max(skyBrightness - deltaTime * 2, 0);
         }
 
         // Update pump cooldown
@@ -586,15 +642,30 @@ function draw() {
     // Clear canvas
     ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     
-    // Draw sky with darkness effect
-    const skyColor = isRaining ? 
-        `rgba(${135 - (skyDarkness * 50)}, ${206 - (skyDarkness * 100)}, ${235 - (skyDarkness * 100)}, 1)` : 
-        '#87CEEB';
+    // Draw sky with weather effects
+    let skyColor;
+    if (isHotDay) {
+        // Bright, sunny sky for hot day
+        const brightness = 1 + skyBrightness * 0.3; // Make it extra bright
+        skyColor = `rgba(${74 * brightness}, ${144 * brightness}, ${226 * brightness}, 1)`;
+    } else if (isRaining) {
+        // Dark sky for rain
+        skyColor = `rgba(${135 - (skyDarkness * 50)}, ${206 - (skyDarkness * 100)}, ${235 - (skyDarkness * 100)}, 1)`;
+    } else {
+        // Normal sky
+        skyColor = '#87CEEB';
+    }
     ctx.fillStyle = skyColor;
     ctx.fillRect(0, 0, CANVAS_WIDTH, GROUND_LEVEL);
     
-    // Draw clouds
-    clouds.forEach(cloud => cloud.draw(ctx));
+    // Draw clouds with appropriate colors
+    clouds.forEach(cloud => {
+        if (isHotDay) {
+            cloud.drawHotDay(ctx);
+        } else {
+            cloud.draw(ctx);
+        }
+    });
     
     // Draw rain if active
     if (isRaining) {
@@ -619,12 +690,19 @@ function draw() {
     // Draw water with animation
     drawWater();
     
-    // Draw rain warning if just starting
+    // Draw weather warnings
     if (isRaining && rainTimer > RAIN_DURATION - 500) {
         ctx.fillStyle = 'rgba(255, 255, 255, ' + (rainTimer / RAIN_DURATION) + ')';
         ctx.font = '24px "Press Start 2P"';
         ctx.textAlign = 'center';
         ctx.fillText('HEAVY RAIN!', CANVAS_WIDTH/2, CANVAS_HEIGHT/3);
+    }
+    
+    if (isHotDay && hotDayTimer > HOT_DAY_DURATION - 500) {
+        ctx.fillStyle = 'rgba(255, 255, 255, ' + (hotDayTimer / HOT_DAY_DURATION) + ')';
+        ctx.font = '24px "Press Start 2P"';
+        ctx.textAlign = 'center';
+        ctx.fillText('HOT DAY!', CANVAS_WIDTH/2, CANVAS_HEIGHT/3);
     }
 }
 
@@ -1126,6 +1204,25 @@ function startRain() {
 function stopRain() {
     isRaining = false;
     rainTimer = 0;
+}
+
+// Start hot day event
+function startHotDay() {
+    isHotDay = true;
+    hotDayTimer = HOT_DAY_DURATION;
+    skyBrightness = 1;
+    
+    // Add warning text
+    ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+    ctx.font = '24px "Press Start 2P"';
+    ctx.textAlign = 'center';
+    ctx.fillText('HOT DAY!', CANVAS_WIDTH/2, CANVAS_HEIGHT/3);
+}
+
+// Stop hot day event
+function stopHotDay() {
+    isHotDay = false;
+    skyBrightness = 0;
 }
 
 // Start the game
